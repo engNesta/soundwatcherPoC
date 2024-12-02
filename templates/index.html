@@ -11,10 +11,17 @@
             margin-top: 20px;
             text-align: center;
         }
+        #gunshot {
+            font-size: 24px;
+            color: red;
+            margin-top: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div id="volume">Volume: -80.00 dB</div>
+    <div id="gunshot"></div> <!-- This is where gunshot detection message will show -->
 
     <script>
         // Establish WebSocket connection
@@ -31,9 +38,18 @@
     
         socket.on('volume_update', function(data) {
             const volumeElement = document.getElementById('volume');
-            volumeElement.textContent = `Volume: ${data.volume.toFixed(2)} dB`; // Update the volume text
+            const gunshotElement = document.getElementById('gunshot');
+            
+            // Update the volume text
+            volumeElement.textContent = `Volume: ${data.volume.toFixed(2)} dB`; 
+
+            // Check if volume is above the threshold and display the gunshot message
+            if (data.volume > 120) {  // If volume exceeds the threshold
+                gunshotElement.textContent = 'Gunshot detected or loud sound detected';  // Show gunshot message
+            } else {
+                gunshotElement.textContent = '';  // Clear message if volume is below threshold
+            }
         });
     </script>
-    
 </body>
 </html>

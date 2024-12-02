@@ -14,6 +14,9 @@ RATE = 44100
 CHUNK = 1024
 DEVICE_INDEX = 0  # Default device
 
+# Define the threshold for gunshots (in dB)
+THRESHOLD_DB = -80  # You can adjust this value based on your testing
+
 def get_volume(indata):
     """Convert the audio data to dB."""
     rms = np.linalg.norm(indata) / len(indata)
@@ -41,10 +44,13 @@ def start_audio_stream_process(socketio):
             data = np.frombuffer(stream.read(CHUNK), dtype=np.float32)
             volume = get_volume(data)
             
-            # Emit the volume data to the WebSocket, converting numpy.float32 to a native float
+            # Check if the volume exceeds the threshold and trigger an action
+            if volume > THRESHOLD_DB:
+                logger.info(f"Gunshot or loud sound detected! Volume: {volume:.2f} dB")
+            
+            # Emit the volume data to the WebSocket
             socketio.emit('volume_update', {'volume': float(volume)})
 
-            
             # Log volume for debugging
             logger.debug(f"Volume: {volume:.2f} dB")
     except Exception as e:
