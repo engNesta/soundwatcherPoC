@@ -2,6 +2,7 @@ import pyaudio
 import numpy as np
 import logging
 from flask_socketio import SocketIO
+import collections
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -17,13 +18,30 @@ DEVICE_INDEX = 0  # Default device
 # Define the threshold for gunshots (in dB)
 THRESHOLD_DB = -45  # You can adjust this value based on your testing
 
-def get_volume(indata):
-    """Convert the audio data to dB."""
+# Create a deque to store the last RMS values for moving average
+MOVING_AVERAGE_WINDOW = 10  # Number of RMS values to average
+rms_values = collections.deque(maxlen=MOVING_AVERAGE_WINDOW)
+
+def get_rms(indata):
+    """Calculate RMS (Root Mean Square) of the incoming audio data."""
     rms = np.linalg.norm(indata) / len(indata)
     if rms == 0:
-        return -np.inf
-    dB = 20 * np.log10(rms)
-    return dB
+        return 0
+    return rms
+
+def moving_average(rms_value):
+    """Apply moving average to smooth out the RMS values."""
+    rms_values.append(rms_value)
+    return np.mean(rms_values)
+
+def get_volume(indata):
+    """Get the RMS value and smooth it using moving average, then convert to dB."""
+    rms = get_rms(indata)
+    smoothed_rms = moving_average(rms)
+    # Convert to dB
+    if smoothed_rms == 0:
+        return -np.inf  # No sound
+    return 20 * np.log10(smoothed_rms)
 
 def start_audio_stream_process(socketio):
     """Function to start audio capture and emit volume updates."""
