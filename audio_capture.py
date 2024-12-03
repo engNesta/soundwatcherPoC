@@ -11,11 +11,11 @@ logger = logging.getLogger('audio_capture')
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
-CHUNK = 1024
+CHUNK = 2048  # Increased buffer size
 DEVICE_INDEX = 0  # Default device
 
 # Define the threshold for gunshots (in dB)
-THRESHOLD_DB = -80  # You can adjust this value based on your testing
+THRESHOLD_DB = -45  # You can adjust this value based on your testing
 
 def get_volume(indata):
     """Convert the audio data to dB."""
