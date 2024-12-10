@@ -16,7 +16,7 @@ CHUNK = 2048  # Increased buffer size
 DEVICE_INDEX = 0  # Default device
 
 # Define the threshold for gunshots (in dB)
-THRESHOLD_DB = -45  # You can adjust this value based on your testing
+THRESHOLD_DB = -60  # You can adjust this value based on your testing
 
 # Create a deque to store the last RMS values for moving average
 MOVING_AVERAGE_WINDOW = 10  # Number of RMS values to average

@@ -44,7 +44,7 @@
             volumeElement.textContent = `Volume: ${data.volume.toFixed(2)} dB`; 
 
             // Check if volume is above the threshold and display the gunshot message
-            if (data.volume > -45) {  // If volume exceeds the threshold (adjust based on your testing)
+            if (data.volume > -60) {  // If volume exceeds the threshold (adjust based on your testing)
                 gunshotElement.textContent = 'Gunshot detected or loud sound detected';  // Show gunshot message
             } else {
                 gunshotElement.textContent = '';  // Clear message if volume is below threshold
