@@ -1,19 +1,46 @@
 import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import BatchNormalization
+import numpy as np
 
-def test_model_loading(model_path):
+def load_tflite_model(model_path):
     try:
-        # Load the model
-        model = load_model(model_path, custom_objects={'BatchNormalization': BatchNormalization})
+        # Load the TFLite model
+        interpreter = tf.lite.Interpreter(model_path=model_path)
+        interpreter.allocate_tensors()
+
+        # Get model input and output details
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+
+        # Print input and output details for debugging
         print("Model loaded successfully!")
-        # Print model summary to verify structure
-        model.summary()
+        print(f"Input Details: {input_details}")
+        print(f"Output Details: {output_details}")
+        
+        return interpreter
     except Exception as e:
-        print("Error loading model:", str(e))
+        print(f"Error loading TFLite model: {e}")
+        return None
 
-# Path to your saved model
-model_path = "model/128x128.h5"  # Update this to your actual model path
+# Path to your TFLite model
+model_path = "model/Low Cost Gunshot Detection Model.tflite"
 
-# Run the test
-test_model_loading(model_path)
+# Test the model loading
+interpreter = load_tflite_model(model_path)
+
+# Additional test: Check if the model can handle dummy input
+if interpreter:
+    # Create dummy input data based on the model's input shape
+    input_details = interpreter.get_input_details()
+    input_shape = input_details[0]['shape']  # Get input shape
+    dummy_input = np.random.random_sample(input_shape).astype(np.float32)  # Create random data
+
+    # Run inference
+    interpreter.set_tensor(input_details[0]['index'], dummy_input)
+    interpreter.invoke()
+
+    # Get the output data
+    output_details = interpreter.get_output_details()
+    output_data = interpreter.get_tensor(output_details[0]['index'])
+
+    print("Inference successful!")
+    print(f"Output Data: {output_data}")
