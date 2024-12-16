@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environment
 venv/
+tf-env/
 
 # MacOS system files
 .DS_Store
