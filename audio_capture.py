@@ -5,104 +5,86 @@ import collections
 import time
 from model_inference import run_inference  # Import model inference module
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('audio_capture')
 
-# Audio stream parameters
-FORMAT = pyaudio.paFloat32
-CHANNELS = 1
-RATE = 44100
-CHUNK = 2048  # Buffer size
-DEVICE_INDEX = 0  # Default device (adjust as needed)
+class AudioCapture:
+    FORMAT = pyaudio.paFloat32
+    CHANNELS = 1
+    RATE = 44100
+    CHUNK = 2048  # Buffer size
+    DEVICE_INDEX = 0  # Default device (adjust as needed)
 
-# Define the threshold for sound detection (in dB)
-THRESHOLD_DB = -20  # Adjust based on testing
+    def __init__(self, threshold_db=-20, cooldown_time=2):
+        self.p = pyaudio.PyAudio()
+        self.stream = None
+        self.threshold_db = threshold_db
+        self.cooldown_time = cooldown_time
+        self.last_detection_time = 0
+        self.rms_values = collections.deque(maxlen=10)
 
-# Moving average window size
-MOVING_AVERAGE_WINDOW = 10
-rms_values = collections.deque(maxlen=MOVING_AVERAGE_WINDOW)  # Store recent RMS values
+    def get_rms(self, indata):
+        return np.sqrt(np.mean(np.square(indata)))
 
-# Cooldown parameters
-COOLDOWN_TIME = 2  # Cooldown period in seconds
-last_detection_time = 0
+    def moving_average(self, rms_value):
+        self.rms_values.append(rms_value)
+        return np.mean(self.rms_values)
 
-def get_rms(indata):
-    """
-    Calculate RMS (Root Mean Square) for the given audio data.
-    """
-    rms = np.sqrt(np.mean(np.square(indata)))
-    return rms
+    def calculate_db(self, rms):
+        return 20 * np.log10(rms) if rms > 0 else -np.inf
 
-def moving_average(rms_value):
-    """
-    Smooth the RMS values using a moving average.
-    """
-    rms_values.append(rms_value)
-    return np.mean(rms_values)
+    def get_audio_data(self):
+        try:
+            if self.stream is None:
+                self.stream = self.p.open(format=self.FORMAT,
+                                          channels=self.CHANNELS,
+                                          rate=self.RATE,
+                                          input=True,
+                                          frames_per_buffer=self.CHUNK,
+                                          input_device_index=self.DEVICE_INDEX)
+            data = np.frombuffer(self.stream.read(self.CHUNK, exception_on_overflow=False), dtype=np.float32)
+            rms = self.get_rms(data)
+            smoothed_rms = self.moving_average(rms)
+            volume_db = self.calculate_db(smoothed_rms)
+    
+            # Always return the volume_db for real-time display
+            if volume_db > self.threshold_db and (time.time() - self.last_detection_time > self.cooldown_time):
+                self.last_detection_time = time.time()
+                return data, volume_db  # Return data and volume when threshold is exceeded
+    
+            # If threshold is not exceeded, return None for data but still return volume
+            return None, volume_db
+    
+        except Exception as e:
+            print(f"Error capturing audio data: {e}")
+            return None, None
 
-def calculate_db(rms):
-    """
-    Convert RMS value to decibels (dB).
-    """
-    return 20 * np.log10(rms) if rms > 0 else -np.inf
+
+
+    def cleanup(self):
+        if self.stream:
+            self.stream.stop_stream()
+            self.stream.close()
+        self.p.terminate()
+
 
 def start_audio_stream_process():
-    """
-    Capture audio, compute stable RMS, and print real-time volume updates.
-    Run model inference for loud sounds with a cooldown period.
-    """
-    global last_detection_time
-    p = pyaudio.PyAudio()
-
+    audio_capture = AudioCapture()
+    print("Audio stream started... Press Ctrl+C to stop.")
     try:
-        # Open audio stream
-        stream = p.open(format=FORMAT,
-                        channels=CHANNELS,
-                        rate=RATE,
-                        input=True,
-                        frames_per_buffer=CHUNK,
-                        input_device_index=DEVICE_INDEX)
-
-        print("Audio stream started... Press Ctrl+C to stop.")
-
         while True:
-            try:
-                # Read audio data from the stream
-                data = np.frombuffer(stream.read(CHUNK, exception_on_overflow=False), dtype=np.float32)
-
-                # Compute RMS and smooth it using a moving average
-                rms = get_rms(data)
-                smoothed_rms = moving_average(rms)
-
-                # Convert smoothed RMS to dB
-                volume_db = calculate_db(smoothed_rms)
-
-                # Print the volume data for debugging
-                print(f"Volume: {volume_db:.2f} dB")
-
-                # Detect loud sounds exceeding the threshold with cooldown
-                if volume_db > THRESHOLD_DB and (time.time() - last_detection_time > COOLDOWN_TIME):
-                    print(f"LOUD SOUND DETECTED! Volume: {volume_db:.2f} dB")
-
-                    # Run inference on detected sound
-                    label, confidence = run_inference(data)
-                    print(f"Prediction: {label} | Confidence: {confidence:.2f}")
-                    
-                    # Update the last detection time
-                    last_detection_time = time.time()
-
-            except Exception as read_error:
-                print(f"Error reading audio stream: {str(read_error)}")
-                break
+            audio_data, volume_db = audio_capture.get_audio_data()
+            if audio_data is not None:
+                print(f"LOUD SOUND DETECTED! Volume: {volume_db:.2f} dB")
+                label, confidence = run_inference(audio_data)
+                print(f"Prediction: {label} | Confidence: {confidence:.2f}%")
+            time.sleep(0.1)
     except KeyboardInterrupt:
         print("KeyboardInterrupt received. Exiting audio stream.")
+    except Exception as e:
+        logging.error(f"Error during audio stream process: {e}")
     finally:
-        # Cleanup audio stream resources
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+        audio_capture.cleanup()
         print("Audio stream stopped.")
+
 
 if __name__ == "__main__":
     start_audio_stream_process()

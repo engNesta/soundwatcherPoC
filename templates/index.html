@@ -3,35 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Volume Display</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
-    <style>
-        #volume {
-            font-size: 32px;
-            margin-top: 20px;
-            text-align: center;
-        }
-    </style>
+    <title>Real-Time Gunshot Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
-    <div id="volume">Volume: Waiting for data...</div>
+    <h1>Real-Time Gunshot Detection</h1>
+    <!-- New Real-Time Volume Stream -->
+    <h3>Real-Time Volume: <span id="real_time_volume">-</span> dB</h3>
+    <!-- Existing Elements -->
+    <h3>Volume: <span id="volume">-</span> dB</h3>
+    <h3>Prediction: <span id="prediction">-</span></h3>
+    <h3>Confidence: <span id="confidence">-</span>%</h3>
 
     <script>
-        // Establish WebSocket connection
-        const socket = io.connect('http://127.0.0.1:5000');  // Ensure the URL matches Flask server
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
 
+        // Debug: Confirm Socket.IO connection
         socket.on('connect', function() {
-            console.log('WebSocket connected');
+            console.log("Successfully connected to the server.");
         });
 
-        socket.on('volume_update', function(data) {
-            console.log('Received volume_update:', data);
-            const volumeElement = document.getElementById('volume');
-            volumeElement.textContent = `Volume: ${data.volume.toFixed(2)} dB`;
+        // Listen for the real-time volume stream
+        socket.on('volume_stream', function(data) {
+            console.log("Volume Stream:", data.volume);  // Debug: Log received data
+            requestAnimationFrame(() => {
+                document.getElementById('real_time_volume').innerText = data.volume.toFixed(2);
+            });
         });
 
+
+        // Listen for 'audio_data' events when threshold is crossed
+        socket.on('audio_data', function(data) {
+            console.log("Audio Data:", data);
+            document.getElementById('volume').innerText = data.volume.toFixed(2);
+            document.getElementById('prediction').innerText = data.label;
+            document.getElementById('confidence').innerText = data.confidence.toFixed(2);
+        });
+
+        // Debug: Handle disconnects
         socket.on('disconnect', function() {
-            console.log('WebSocket disconnected');
+            console.log("Disconnected from the server.");
         });
     </script>
 </body>
