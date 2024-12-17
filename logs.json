@@ -1,0 +1,26 @@
+[
+    {
+        "time": "2024-12-17 08:59:25",
+        "volume": -9.45,
+        "prediction": "Other",
+        "confidence": 97.31
+    },
+    {
+        "time": "2024-12-17 08:59:25",
+        "volume": -8.3,
+        "prediction": "Other",
+        "confidence": 99.08
+    },
+    {
+        "time": "2024-12-17 08:59:40",
+        "volume": -19.96,
+        "prediction": "Other",
+        "confidence": 94.65
+    },
+    {
+        "time": "2024-12-17 08:59:55",
+        "volume": -19.64,
+        "prediction": "Other",
+        "confidence": 93.89
+    }
+]
