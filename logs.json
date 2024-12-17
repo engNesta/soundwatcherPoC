@@ -1,14 +1,26 @@
 [
     {
-        "time": "2024-12-17 09:08:04",
-        "volume": -8.21,
+        "time": "2024-12-17 09:22:29",
+        "volume": -12.41,
         "prediction": "Other",
-        "confidence": 88.81
+        "confidence": 100.0
     },
     {
-        "time": "2024-12-17 09:08:04",
-        "volume": -6.91,
+        "time": "2024-12-17 09:22:29",
+        "volume": -11.96,
         "prediction": "Other",
-        "confidence": 97.9
+        "confidence": 88.08
+    },
+    {
+        "time": "2024-12-17 09:22:47",
+        "volume": -12.32,
+        "prediction": "Other",
+        "confidence": 100.0
+    },
+    {
+        "time": "2024-12-17 09:23:34",
+        "volume": -11.04,
+        "prediction": "Other",
+        "confidence": 76.03
     }
 ]

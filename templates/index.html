@@ -3,53 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Gunshot Detection</title>
+    <title>Soundwatcher PoC</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #020202; /* Black background */
+            color: #faf9f6; /* White text */
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+    
+        h1, h3 {
+            margin: 10px 0;
+        }
+    
+        h1 { 
+            color: #0047AB; /* Cobalt Blue */
+        }
+    
+        h3 {
+            color: #faf9f6; /* White text */
+        }
+    
+        .data-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #333333; /* Dark Gray Border */
+            border-radius: 10px;
+            background-color: #020202; /* Black container */
+            display: inline-block;
+            box-shadow: 0px 4px 6px rgba(255, 255, 255, 0.2); /* Light shadow for depth */
+        }
+    
+        span {
+            font-weight: 600;
+            color: #0047AB; /* Cobalt Blue for key values */
+        }
+    
+        /* Webcam Styling */
+        #webcam-container {
+            margin-top: 20px;
+        }
+    
+        #webcam {
+            border: 5px solid #0047AB; /* Cobalt Blue border */
+            border-radius: 10px;
+            width: 60%;
+            box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.2); /* Light shadow */
+        }
+    
+        /* Button Styling */
+        .button {
+            background-color: #0047AB; /* Cobalt Blue */
+            color: #faf9f6; /* White text */
+            font-weight: 600;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0px 2px 4px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease-in-out;
+        }
+    
+        .button:hover {
+            background-color: #333333; /* Dark Gray hover */
+            color: #faf9f6; /* White text */
+        }
+    
+        /* Webcam Feed Title */
+        #webcam-container h3 {
+            color: #faf9f6; /* White text */
+        }
+    </style>
+    
 </head>
 <body>
-    <h1>Real-Time Gunshot Detection</h1>
+    <h1>Soundwatcher PoC</h1>
 
-    <!-- Real-Time Volume Stream -->
-    <h3>Real-Time Volume: <span id="real_time_volume">-</span> dB</h3>
+    <!-- Real-Time Data Container -->
+    <div class="data-container">
+        <h3>Real-Time Volume: <span id="real_time_volume">-</span> dB</h3>
+        <h3>Volume: <span id="volume">-</span> dB</h3>
+        <h3>Prediction: <span id="prediction">-</span></h3>
+        <h3>Confidence: <span id="confidence">-</span>%</h3>
+    </div>
 
-    <!-- Latest Events -->
-    <h3>Latest Events:</h3>
-    <ul id="log_list"></ul>
+    <!-- Webcam Feed -->
+    <div id="webcam-container">
+        <h3>Live Webcam</h3>
+        <img id="webcam" src="" alt="Webcam Feed">
+    </div>
 
-    <!-- Live Webcam Stream -->
-    <h3>Live Webcam:</h3>
-    <img id="webcam" src="" alt="Live Webcam Stream" style="width: 500px; border: 1px solid #ddd;">
-
-    <!-- Full Logs Link -->
-    <h3>Full Logs: <a href="/logs" target="_blank">View All Logs</a></h3>
+    <!-- Buttons -->
+    <button class="button" onclick="window.location.reload();">Refresh</button>
+    <button class="button" onclick="location.href='/logs';">View Logs</button>
+    <button class="button">Simulate</button>
 
     <script>
         const socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        // Real-time volume updates
+        // Real-Time Volume Stream
         socket.on('volume_stream', function(data) {
             document.getElementById('real_time_volume').innerText = data.volume.toFixed(2);
         });
 
-        // Log the latest events
-        const logList = document.getElementById('log_list');
-        socket.on('log_event', function(event) {
-            const logEntry = document.createElement('li');
-            logEntry.innerText = `[${event.time}] Volume: ${event.volume} dB, Prediction: ${event.prediction}, Confidence: ${event.confidence}%`;
-            logList.prepend(logEntry);
-            while (logList.children.length > 3) {
-                logList.removeChild(logList.lastChild);
-            }
+        // Audio Data Stream
+        socket.on('audio_data', function(data) {
+            document.getElementById('volume').innerText = data.volume.toFixed(2);
+            document.getElementById('prediction').innerText = data.label;
+            document.getElementById('confidence').innerText = data.confidence.toFixed(2);
         });
 
-        // Webcam stream
+        // Webcam Stream
         socket.on('webcam_frame', function(data) {
             document.getElementById('webcam').src = 'data:image/jpeg;base64,' + data.frame;
-        });
-
-        // Debugging
-        socket.on('connect', function() {
-            console.log("Successfully connected to the server.");
         });
     </script>
 </body>
