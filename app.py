@@ -1,15 +1,21 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO
-from audio_capture import start_audio_stream_process
+from flask import Flask
+import logging
+from audio_capture import start_audio_stream_process  # Import the audio capture function
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("app")
 
 app = Flask(__name__)
-socketio = SocketIO(app)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return "Audio stream is running... Check the console for real-time volume updates."
 
-if __name__ == '__main__':
-    # Start the audio stream in the background and listen for WebSocket messages
-    socketio.start_background_task(start_audio_stream_process, socketio)
-    socketio.run(app, debug=True)
+if __name__ == "__main__":
+    try:
+        # Start audio stream in the background
+        logger.info("Starting audio stream...")
+        start_audio_stream_process()
+    except Exception as e:
+        logger.error(f"Error starting audio stream: {e}")
