@@ -12,40 +12,44 @@
     <!-- Real-Time Volume Stream -->
     <h3>Real-Time Volume: <span id="real_time_volume">-</span> dB</h3>
 
-    <!-- Display First Three Events -->
+    <!-- Latest Events -->
     <h3>Latest Events:</h3>
-    <ul id="log_list">
-        <!-- Logs will be dynamically populated here -->
-    </ul>
+    <ul id="log_list"></ul>
 
+    <!-- Live Webcam Stream -->
+    <h3>Live Webcam:</h3>
+    <img id="webcam" src="" alt="Live Webcam Stream" style="width: 500px; border: 1px solid #ddd;">
+
+    <!-- Full Logs Link -->
     <h3>Full Logs: <a href="/logs" target="_blank">View All Logs</a></h3>
 
     <script>
         const socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        // Listen for real-time volume
+        // Real-time volume updates
         socket.on('volume_stream', function(data) {
             document.getElementById('real_time_volume').innerText = data.volume.toFixed(2);
         });
 
-        // Listen for logged events
+        // Log the latest events
         const logList = document.getElementById('log_list');
         socket.on('log_event', function(event) {
-            // Create a log entry
             const logEntry = document.createElement('li');
             logEntry.innerText = `[${event.time}] Volume: ${event.volume} dB, Prediction: ${event.prediction}, Confidence: ${event.confidence}%`;
-
-            // Add to the log list
-            logList.prepend(logEntry);  // Add at the top
-
-            // Remove excess logs to show only 3
+            logList.prepend(logEntry);
             while (logList.children.length > 3) {
                 logList.removeChild(logList.lastChild);
             }
         });
 
+        // Webcam stream
+        socket.on('webcam_frame', function(data) {
+            document.getElementById('webcam').src = 'data:image/jpeg;base64,' + data.frame;
+        });
+
+        // Debugging
         socket.on('connect', function() {
-            console.log("Connected to the server.");
+            console.log("Successfully connected to the server.");
         });
     </script>
 </body>

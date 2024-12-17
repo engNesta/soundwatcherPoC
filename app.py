@@ -1,3 +1,5 @@
+import cv2  # OpenCV for webcam access
+import base64
 from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO
 import threading
@@ -12,9 +14,10 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # Global variables
-logs = []  # In-memory log storage
-LOG_FILE = "logs.json"  # JSON file to store logs
+logs = []
+LOG_FILE = "logs.json"
 thread_running = False
+webcam_running = False
 thread_lock = threading.Lock()
 
 @app.route('/')
@@ -33,20 +36,15 @@ def get_logs():
         return jsonify([])
 
 def log_event(event):
-    """
-    Append an event to the logs and save to a JSON file.
-    Event format: {'time': ..., 'volume': ..., 'prediction': ..., 'confidence': ...}
-    """
+    """Append an event to logs and save to a JSON file."""
     global logs
     logs.append(event)
-    if len(logs) > 50:  # Keep the log size manageable
+    if len(logs) > 50:
         logs.pop(0)
 
-    # Save to JSON file
     with open(LOG_FILE, 'w') as file:
         json.dump(logs, file, indent=4)
 
-    # Emit the log to the frontend
     socketio.emit('log_event', event)
 
 def stream_audio_data():
@@ -57,11 +55,8 @@ def stream_audio_data():
         while True:
             audio_data, volume_db = audio_capture.get_audio_data()
             if volume_db is not None:
-                # Emit real-time volume
                 socketio.emit('volume_stream', {'volume': round(volume_db, 2)})
-                print(f"Volume: {volume_db:.2f} dB")
 
-                # Log event when volume is above threshold
                 if audio_data is not None:
                     label, confidence = run_inference(audio_data)
                     event = {
@@ -71,25 +66,47 @@ def stream_audio_data():
                         'confidence': round(confidence, 2)
                     }
                     log_event(event)
-                    print(f"Logged Event -> {event}")
             time.sleep(0.1)
-    except Exception as e:
-        print(f"Error in streaming audio: {e}")
     finally:
         audio_capture.cleanup()
-        print("Audio stream cleaned up.")
+
+def stream_webcam():
+    """Background thread to capture and stream webcam frames."""
+    global webcam_running
+    webcam_running = True
+    video_capture = cv2.VideoCapture(0)  # Open webcam (default: 0)
+    try:
+        while webcam_running:
+            ret, frame = video_capture.read()
+            if not ret:
+                continue
+
+            # Encode the frame to JPEG and convert to base64
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
+            # Emit the frame to the frontend
+            socketio.emit('webcam_frame', {'frame': frame_base64})
+            time.sleep(0.05)  # Stream at ~20 FPS
+    except Exception as e:
+        print(f"Error in webcam stream: {e}")
+    finally:
+        video_capture.release()
+        print("Webcam stream stopped.")
 
 @socketio.on('connect')
 def handle_connect():
-    """Start streaming audio data when a new connection is established."""
-    global thread_running
+    """Start threads when a new client connects."""
+    global thread_running, webcam_running
     with thread_lock:
         if not thread_running:
             print("Client connected. Starting audio streaming...")
             thread_running = True
             threading.Thread(target=stream_audio_data, daemon=True).start()
-        else:
-            print("Client connected. Audio streaming already running.")
+
+        if not webcam_running:
+            print("Starting webcam streaming...")
+            threading.Thread(target=stream_webcam, daemon=True).start()
 
 if __name__ == "__main__":
     print("Starting Flask server...")
