@@ -13,78 +13,80 @@
             color: #faf9f6; /* White text */
             margin: 0;
             padding: 0;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-    
-        h1, h3 {
-            margin: 10px 0;
-        }
-    
-        h1 { 
+
+        h1 {
             color: #0047AB; /* Cobalt Blue */
+            margin-top: 20px;
         }
-    
-        h3 {
-            color: #faf9f6; /* White text */
-        }
-    
+
         .data-container {
-            margin-top: 20px;
-            padding: 15px;
-            border: 2px solid #333333; /* Dark Gray Border */
+            margin: 20px 0;
+            background-color: #020202;
+            border: 2px solid #333333;
             border-radius: 10px;
-            background-color: #020202; /* Black container */
-            display: inline-block;
-            box-shadow: 0px 4px 6px rgba(255, 255, 255, 0.2); /* Light shadow for depth */
+            padding: 20px;
+            text-align: left;
+            box-shadow: 0px 4px 6px rgba(255, 255, 255, 0.2);
         }
-    
-        span {
-            font-weight: 600;
-            color: #0047AB; /* Cobalt Blue for key values */
-        }
-    
-        /* Webcam Styling */
-        #webcam-container {
+
+        .webcam-container {
             margin-top: 20px;
+            text-align: center;
+            display: none; /* Initially hidden */
         }
-    
+
         #webcam {
-            border: 5px solid #0047AB; /* Cobalt Blue border */
+            border: 5px solid #0047AB;
             border-radius: 10px;
-            width: 60%;
-            box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.2); /* Light shadow */
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.2);
         }
-    
-        /* Button Styling */
+
         .button {
-            background-color: #0047AB; /* Cobalt Blue */
-            color: #faf9f6; /* White text */
+            background-color: #0047AB;
+            color: #faf9f6;
             font-weight: 600;
             border: none;
             border-radius: 20px;
             padding: 10px 20px;
             cursor: pointer;
-            margin: 10px;
+            margin-top: 20px;
             box-shadow: 0px 2px 4px rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease-in-out;
         }
-    
-        .button:hover {
-            background-color: #333333; /* Dark Gray hover */
-            color: #faf9f6; /* White text */
+
+        #loading-text {
+            color: #faf9f6; /* White */
+            font-size: 1.2rem;
+            margin: 20px 0;
         }
-    
-        /* Webcam Feed Title */
-        #webcam-container h3 {
-            color: #faf9f6; /* White text */
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #0047AB; /* Cobalt Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }       
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
+
     </style>
-    
 </head>
 <body>
     <h1>Soundwatcher PoC</h1>
 
-    <!-- Real-Time Data Container -->
+    <!-- Real-Time Data -->
     <div class="data-container">
         <h3>Real-Time Volume: <span id="real_time_volume">-</span> dB</h3>
         <h3>Volume: <span id="volume">-</span> dB</h3>
@@ -92,36 +94,77 @@
         <h3>Confidence: <span id="confidence">-</span>%</h3>
     </div>
 
-    <!-- Webcam Feed -->
-    <div id="webcam-container">
-        <h3>Live Webcam</h3>
-        <img id="webcam" src="" alt="Webcam Feed">
+    <!-- Webcam Container (Initially Hidden) -->
+    <div id="webcam-container" class="webcam-container">
+        <div id="loading-text">Loading...</div> <!-- Placeholder while webcam starts -->
     </div>
 
-    <!-- Buttons -->
-    <button class="button" onclick="window.location.reload();">Refresh</button>
-    <button class="button" onclick="location.href='/logs';">View Logs</button>
-    <button class="button">Simulate</button>
 
     <script>
         const socket = io.connect('http://' + document.domain + ':' + location.port);
+        let webcamTimeout;
+
+        // Function to dynamically add webcam feed
+        function activateWebcam() {
+            const webcamContainer = document.getElementById('webcam-container');
+            webcamContainer.innerHTML = ''; // Clear previous webcam if any
+
+            // Add loading text or spinner
+            const loadingText = document.createElement('div');
+            loadingText.id = 'loading-text';
+            loadingText.innerHTML = '<div class="spinner"></div>'; // Add spinner here
+            webcamContainer.appendChild(loadingText);
+
+        
+
+            webcamContainer.style.display = 'block';
+
+            // Automatically stop webcam after 10 seconds
+            if (webcamTimeout) clearTimeout(webcamTimeout);
+            webcamTimeout = setTimeout(() => {
+                webcamContainer.style.display = 'none';
+                webcamContainer.innerHTML = ''; // Remove the img component
+                console.log('Webcam deactivated');
+            }, 10000);
+        }
 
         // Real-Time Volume Stream
         socket.on('volume_stream', function(data) {
             document.getElementById('real_time_volume').innerText = data.volume.toFixed(2);
         });
 
-        // Audio Data Stream
+        // Audio Data Stream (Trigger webcam activation on threshold detection)
         socket.on('audio_data', function(data) {
             document.getElementById('volume').innerText = data.volume.toFixed(2);
             document.getElementById('prediction').innerText = data.label;
             document.getElementById('confidence').innerText = data.confidence.toFixed(2);
+
+            // Activate webcam when an event occurs
+            activateWebcam();
         });
 
-        // Webcam Stream
+        // Webcam Frame Stream
         socket.on('webcam_frame', function(data) {
-            document.getElementById('webcam').src = 'data:image/jpeg;base64,' + data.frame;
-        });
+    const webcamContainer = document.getElementById('webcam-container');
+
+    // If "Loading..." or spinner exists, replace it with the webcam feed
+    if (!document.getElementById('webcam')) {
+        webcamContainer.innerHTML = ''; // Clear "Loading..."
+        const webcam = document.createElement('img');
+        webcam.id = 'webcam';
+        webcam.alt = 'Webcam Feed';
+        webcam.style.border = '5px solid #0047AB';
+        webcam.style.borderRadius = '10px';
+        webcam.style.width = '100%';
+        webcam.style.maxWidth = '600px';
+        webcam.style.boxShadow = '0px 4px 8px rgba(255, 255, 255, 0.2)';
+        webcamContainer.appendChild(webcam);
+    }
+
+    // Update the webcam image
+    const webcam = document.getElementById('webcam');
+    webcam.src = 'data:image/jpeg;base64,' + data.frame;
+});
     </script>
 </body>
 </html>
