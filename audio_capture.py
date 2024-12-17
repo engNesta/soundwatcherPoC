@@ -2,6 +2,8 @@ import pyaudio
 import numpy as np
 import logging
 import collections
+import time
+from model_inference import run_inference  # Import model inference module
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -21,6 +23,9 @@ THRESHOLD_DB = -20  # Adjust based on testing
 MOVING_AVERAGE_WINDOW = 10
 rms_values = collections.deque(maxlen=MOVING_AVERAGE_WINDOW)  # Store recent RMS values
 
+# Cooldown parameters
+COOLDOWN_TIME = 2  # Cooldown period in seconds
+last_detection_time = 0
 
 def get_rms(indata):
     """
@@ -29,7 +34,6 @@ def get_rms(indata):
     rms = np.sqrt(np.mean(np.square(indata)))
     return rms
 
-
 def moving_average(rms_value):
     """
     Smooth the RMS values using a moving average.
@@ -37,18 +41,18 @@ def moving_average(rms_value):
     rms_values.append(rms_value)
     return np.mean(rms_values)
 
-
 def calculate_db(rms):
     """
     Convert RMS value to decibels (dB).
     """
     return 20 * np.log10(rms) if rms > 0 else -np.inf
 
-
 def start_audio_stream_process():
     """
     Capture audio, compute stable RMS, and print real-time volume updates.
+    Run model inference for loud sounds with a cooldown period.
     """
+    global last_detection_time
     p = pyaudio.PyAudio()
 
     try:
@@ -77,9 +81,16 @@ def start_audio_stream_process():
                 # Print the volume data for debugging
                 print(f"Volume: {volume_db:.2f} dB")
 
-                # Detect loud sounds exceeding the threshold
-                if volume_db > THRESHOLD_DB:
+                # Detect loud sounds exceeding the threshold with cooldown
+                if volume_db > THRESHOLD_DB and (time.time() - last_detection_time > COOLDOWN_TIME):
                     print(f"LOUD SOUND DETECTED! Volume: {volume_db:.2f} dB")
+
+                    # Run inference on detected sound
+                    label, confidence = run_inference(data)
+                    print(f"Prediction: {label} | Confidence: {confidence:.2f}")
+                    
+                    # Update the last detection time
+                    last_detection_time = time.time()
 
             except Exception as read_error:
                 print(f"Error reading audio stream: {str(read_error)}")
@@ -93,5 +104,5 @@ def start_audio_stream_process():
         p.terminate()
         print("Audio stream stopped.")
 
-
-
+if __name__ == "__main__":
+    start_audio_stream_process()
