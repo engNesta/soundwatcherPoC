@@ -72,6 +72,7 @@ def start_audio_stream_process():
     try:
         while True:
             audio_data, volume_db = audio_capture.get_audio_data()
+            print(f"Volume: {volume_db:.2f} dB")
             if audio_data is not None:
                 print(f"LOUD SOUND DETECTED! Volume: {volume_db:.2f} dB")
                 label, confidence = run_inference(audio_data)
