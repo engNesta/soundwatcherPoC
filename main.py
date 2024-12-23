@@ -16,7 +16,7 @@ class SoundwatcherApp(ctk.CTk):
         self.configure_grid()
         self.running = True  # To manage thread termination
         self.loaded_log_ids = set()  # Track already displayed log IDs
-        self.threshold_value = -30  # Default detection threshold
+        self.threshold_value = 90  # Default detection threshold
 
         # Sidebar (Logs Section)
         self.sidebar = ctk.CTkScrollableFrame(self, width=300)
@@ -49,7 +49,7 @@ class SoundwatcherApp(ctk.CTk):
         self.realtime_volume_label.pack(pady=10)
 
         # Threshold slider and set button
-        self.threshold_slider = ctk.CTkSlider(self.realtime_frame, from_=-50, to=0, number_of_steps=50, command=self.update_threshold_label)
+        self.threshold_slider = ctk.CTkSlider(self.realtime_frame, from_=70, to=130, number_of_steps=50, command=self.update_threshold_label)
         self.threshold_slider.set(self.threshold_value)  # Set default value
         self.threshold_slider.pack(pady=5)
 
