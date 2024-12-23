@@ -13,7 +13,7 @@ class AudioCapture:
     CHUNK = 2048  # Buffer size
     DEVICE_INDEX = 0  # Default device (adjust as needed)
 
-    def __init__(self, threshold_db=-20, cooldown_time=2):
+    def __init__(self, threshold_db=-27, cooldown_time=2):
         self.p = pyaudio.PyAudio()
         self.stream = None
         self.threshold_db = threshold_db
