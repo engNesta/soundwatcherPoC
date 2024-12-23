@@ -8,7 +8,6 @@ from audio_capture import AudioCapture
 from model_inference import run_inference
 
 
-
 class SoundwatcherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -17,6 +16,7 @@ class SoundwatcherApp(ctk.CTk):
         self.configure_grid()
         self.running = True  # To manage thread termination
         self.loaded_log_ids = set()  # Track already displayed log IDs
+        self.threshold_value = -30  # Default detection threshold
 
         # Sidebar (Logs Section)
         self.sidebar = ctk.CTkScrollableFrame(self, width=300)
@@ -46,7 +46,18 @@ class SoundwatcherApp(ctk.CTk):
         self.realtime_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         ctk.CTkLabel(self.realtime_frame, text="Microphone ID# Realtime Volume", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=10)
         self.realtime_volume_label = ctk.CTkLabel(self.realtime_frame, text="- dB", font=ctk.CTkFont(size=36, weight="bold"))
-        self.realtime_volume_label.pack(pady=20)
+        self.realtime_volume_label.pack(pady=10)
+
+        # Threshold slider and set button
+        self.threshold_slider = ctk.CTkSlider(self.realtime_frame, from_=-50, to=0, number_of_steps=50, command=self.update_threshold_label)
+        self.threshold_slider.set(self.threshold_value)  # Set default value
+        self.threshold_slider.pack(pady=5)
+
+        self.threshold_label = ctk.CTkLabel(self.realtime_frame, text=f"Threshold: {self.threshold_value:.2f} dB")
+        self.threshold_label.pack(pady=2)
+
+        self.set_threshold_button = ctk.CTkButton(self.realtime_frame, text="Set", command=self.set_threshold)
+        self.set_threshold_button.pack(pady=5)
 
         # 2. Simulation Section
         self.simulation_frame = ctk.CTkFrame(self.bottom_frame, corner_radius=10)
@@ -82,6 +93,19 @@ class SoundwatcherApp(ctk.CTk):
         self.grid_rowconfigure(1, weight=3)  # Bottom section
         self.grid_columnconfigure(1, weight=1)
 
+    def update_threshold_label(self, value):
+        """
+        Update the threshold label as the slider moves.
+        """
+        self.threshold_label.configure(text=f"Threshold: {float(value):.2f} dB")
+
+    def set_threshold(self):
+        """
+        Set the current threshold value from the slider.
+        """
+        self.threshold_value = self.threshold_slider.get()
+        print(f"Threshold set to: {self.threshold_value:.2f} dB")
+
     def add_microphone_buttons(self):
         microphones = [
             {"id": "Mic001", "lat": 56.2, "lon": 14.2, "ip": "192.168.1.101"},
@@ -113,7 +137,9 @@ class SoundwatcherApp(ctk.CTk):
                 if not self.running:  # Avoid UI updates after shutdown
                     break
                 self.realtime_volume_label.configure(text=f"{volume_db:.2f} dB")
-                if audio_data is not None:
+
+                # Check if the detected volume exceeds the dynamic threshold
+                if volume_db > self.threshold_value and audio_data is not None:
                     label, confidence = run_inference(audio_data)
                     self.prediction_label.configure(text=f"Prediction: {label}")
                     self.confidence_label.configure(text=f"Confidence: {confidence:.2f}%")
@@ -121,26 +147,20 @@ class SoundwatcherApp(ctk.CTk):
             print(f"Error in real-time audio: {e}")
 
     def fetch_logs(self):
-        """
-        Fetch logs from logs.json and update the sidebar in real-time.
-        """
         try:
             while self.running:
                 with open("logs.json", "r") as log_file:
                     logs = json.load(log_file)
                     for log in logs:
                         log_id = log.get("id")
-                        if log_id not in self.loaded_log_ids:  # Check if the log ID is already displayed
+                        if log_id not in self.loaded_log_ids:
                             self.add_log_to_sidebar(log)
-                            self.loaded_log_ids.add(log_id)  # Mark this log ID as displayed
-                time.sleep(2)  # Fetch logs every 2 seconds
+                            self.loaded_log_ids.add(log_id)
+                time.sleep(2)
         except Exception as e:
             print(f"Error fetching logs: {e}")
 
     def add_log_to_sidebar(self, log):
-        """
-        Add a single log entry to the sidebar.
-        """
         log_id = log.get("id", "Unknown")
         button_text = f"Log {log_id}"
         ctk.CTkButton(
@@ -149,11 +169,7 @@ class SoundwatcherApp(ctk.CTk):
             command=lambda l=log: self.show_log_popup(l)
         ).pack(pady=2, padx=2, anchor="w")
 
-
     def show_log_popup(self, log):
-        """
-        Show a popup with log details.
-        """
         details = f"Time: {log['time']}\nVolume: {log['volume']}\nPrediction: {log['prediction']}"
         messagebox.showinfo("Log Details", details)
 
@@ -185,10 +201,7 @@ class SoundwatcherApp(ctk.CTk):
             print(f"Error in simulation event: {e}")
 
     def on_close(self):
-        """
-        Handle application close event.
-        """
-        self.running = False  # Stop the audio and logs threads
+        self.running = False
         self.destroy()
 
 
