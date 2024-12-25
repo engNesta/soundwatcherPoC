@@ -14,12 +14,12 @@ import numpy as np
 class SoundwatcherApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Soundwatcher PoC - Full Layout with CTk Buttons")
+        self.title("Soundwatcher PoC - Full Layout with Info Buttons")
         self.geometry("1280x720")
-        self.running = True  # For thread management
+        self.running = True
         self.loaded_log_ids = set()
-        self.threshold_value = 90  # Default threshold
-        self.audio_file_path = None  # Holds the loaded audio file path
+        self.threshold_value = 90
+        self.audio_file_path = None
         self.log_file_path = "logs.json"
 
         # Initialize AudioCapture
@@ -37,12 +37,25 @@ class SoundwatcherApp(ctk.CTk):
         self.logs_container = ctk.CTkFrame(self.sidebar)
         self.logs_container.pack(fill="both", expand=True, padx=5, pady=5)
 
+        # Add info button for Logs section
+        
+        info_logs_button = ctk.CTkButton(self.logs_container, text="?", width=25, height=25, command=self.show_logs_info)
+        info_logs_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
+
+
         # Map Section
         self.map_view = TkinterMapView(self, width=800, height=400, corner_radius=0)
         self.map_view.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
         self.map_view.set_position(56.0, 14.0)
         self.map_view.set_zoom(10)
-        self.add_microphone_markers()  # Add markers for microphones
+        self.add_microphone_markers()
+
+        # Add info button for Map section
+        info_map_button = ctk.CTkButton(self.map_view, text="?", width=25, height=25, command=self.show_map_info)
+        info_map_button.place(relx=1.0, rely=1.0, anchor="se")  # Position at bottom-right
+
+
+        
 
         # Bottom Frame
         self.bottom_frame = ctk.CTkFrame(self, width=800)
@@ -66,6 +79,11 @@ class SoundwatcherApp(ctk.CTk):
         self.set_threshold_button = ctk.CTkButton(self.realtime_frame, text="Set", command=self.set_threshold)
         self.set_threshold_button.pack(pady=5)
 
+        # Add info button for Realtime section
+        info_realtime_button = ctk.CTkButton(self.realtime_frame, text="?", width=25, height=25, command=self.show_realtime_info)
+        info_realtime_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
+
+
         # Simulation Section
         self.simulation_frame = ctk.CTkFrame(self.bottom_frame, corner_radius=10)
         self.simulation_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
@@ -80,6 +98,11 @@ class SoundwatcherApp(ctk.CTk):
         self.audio_file_label = ctk.CTkLabel(self.simulation_frame, text="No audio loaded", font=ctk.CTkFont(size=12))
         self.audio_file_label.pack(pady=5)
 
+        # Add info button for Simulation section
+        info_simulation_button = ctk.CTkButton(self.simulation_frame, text="?", width=25, height=25, command=self.show_simulation_info)
+        info_simulation_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
+
+
         # Prediction Section
         self.prediction_frame = ctk.CTkFrame(self.bottom_frame, corner_radius=10)
         self.prediction_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
@@ -88,6 +111,11 @@ class SoundwatcherApp(ctk.CTk):
         self.prediction_label.pack(pady=5)
         self.confidence_label = ctk.CTkLabel(self.prediction_frame, text="Confidence: -%", font=ctk.CTkFont(size=14))
         self.confidence_label.pack(pady=5)
+
+        # Add info button for Prediction section
+        info_prediction_button = ctk.CTkButton(self.prediction_frame, text="?", width=25, height=25, command=self.show_prediction_info)
+        info_prediction_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
+
 
         # Start Threads
         self.audio_thread = threading.Thread(target=self.start_realtime_audio, daemon=True)
@@ -208,6 +236,41 @@ class SoundwatcherApp(ctk.CTk):
     def show_log_popup(self, log):
         details = f"Time: {log['time']}\nVolume: {log['volume']}\nPrediction: {log['prediction']}"
         messagebox.showinfo("Log Details", details)
+
+    def show_logs_info(self):
+        messagebox.showinfo(
+            "Logs Info",
+            "This section displays all registered events, both simulated and real-time. "
+            "Click on a log button to view detailed information about an event."
+        )
+
+    def show_map_info(self):
+        messagebox.showinfo(
+            "Map Info",
+            "The map displays the geographical locations of the microphones. "
+            "Markers represent the physical position of sensors."
+        )
+
+    def show_realtime_info(self):
+        messagebox.showinfo(
+            "Realtime Audio Info",
+            "This section monitors the real-time audio captured from the microphone. "
+            "It displays the current volume and allows you to set a detection threshold."
+        )
+
+    def show_simulation_info(self):
+        messagebox.showinfo(
+            "Simulation Info",
+            "This section allows you to simulate events by uploading audio files. "
+            "Click 'Simulate Event' after uploading to test the system."
+        )
+
+    def show_prediction_info(self):
+        messagebox.showinfo(
+            "Prediction Info",
+            "This section shows the result of the system's analysis. "
+            "It displays the predicted event type and confidence level."
+        )
 
     def on_close(self):
         self.running = False
