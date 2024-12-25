@@ -7,6 +7,7 @@ import json
 import os
 from audio_capture import AudioCapture
 from model_inference import run_inference
+from log_manager import LogManager
 import librosa
 import numpy as np
 
@@ -21,6 +22,9 @@ class SoundwatcherApp(ctk.CTk):
         self.threshold_value = 90
         self.audio_file_path = None
         self.log_file_path = "logs.json"
+
+        # Log Manager
+        self.log_manager = LogManager()
 
         # Initialize AudioCapture
         self.audio_capture = AudioCapture()
