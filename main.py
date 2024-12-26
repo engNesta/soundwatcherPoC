@@ -41,11 +41,9 @@ class SoundwatcherApp(ctk.CTk):
         self.logs_container = ctk.CTkFrame(self.sidebar)
         self.logs_container.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Add info button for Logs section
-        
+        # Info button for Logs section
         info_logs_button = ctk.CTkButton(self.logs_container, text="?", width=25, height=25, command=self.show_logs_info)
-        info_logs_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
-
+        info_logs_button.pack(side="bottom", anchor="se", pady=5, padx=5)
 
         # Map Section
         self.map_view = TkinterMapView(self, width=800, height=400, corner_radius=0)
@@ -54,12 +52,29 @@ class SoundwatcherApp(ctk.CTk):
         self.map_view.set_zoom(10)
         self.add_microphone_markers()
 
-        # Add info button for Map section
+        # Info button for Map section
         info_map_button = ctk.CTkButton(self.map_view, text="?", width=25, height=25, command=self.show_map_info)
-        info_map_button.place(relx=1.0, rely=1.0, anchor="se")  # Position at bottom-right
+        info_map_button.place(relx=1.0, rely=1.0, anchor="se")
 
+        # Camera View Section (Hidden by Default)
+        self.camera_frame = ctk.CTkFrame(self, width=800, height=200, corner_radius=10)
+        self.camera_frame.grid(row=0, column=2, sticky="nsew", padx=10, pady=10)
+        self.camera_frame.grid_remove()  # Initially hidden
 
-        
+        self.camera_label = ctk.CTkLabel(
+            self.camera_frame, text="Camera View", font=ctk.CTkFont(size=16, weight="bold")
+        )
+        self.camera_label.pack(pady=10)
+
+        self.camera_view_placeholder = ctk.CTkLabel(
+            self.camera_frame, text="No camera activated", font=ctk.CTkFont(size=14)
+        )
+        self.camera_view_placeholder.pack(pady=5)
+
+        self.close_camera_button = ctk.CTkButton(
+            self.camera_frame, text="Close", command=self.hide_camera_view
+        )
+        self.close_camera_button.pack(pady=10)
 
         # Bottom Frame
         self.bottom_frame = ctk.CTkFrame(self, width=800)
@@ -83,10 +98,9 @@ class SoundwatcherApp(ctk.CTk):
         self.set_threshold_button = ctk.CTkButton(self.realtime_frame, text="Set", command=self.set_threshold)
         self.set_threshold_button.pack(pady=5)
 
-        # Add info button for Realtime section
+        # Info button for Realtime section
         info_realtime_button = ctk.CTkButton(self.realtime_frame, text="?", width=25, height=25, command=self.show_realtime_info)
-        info_realtime_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
-
+        info_realtime_button.pack(side="bottom", anchor="se", pady=5, padx=5)
 
         # Simulation Section
         self.simulation_frame = ctk.CTkFrame(self.bottom_frame, corner_radius=10)
@@ -102,10 +116,9 @@ class SoundwatcherApp(ctk.CTk):
         self.audio_file_label = ctk.CTkLabel(self.simulation_frame, text="No audio loaded", font=ctk.CTkFont(size=12))
         self.audio_file_label.pack(pady=5)
 
-        # Add info button for Simulation section
+        # Info button for Simulation section
         info_simulation_button = ctk.CTkButton(self.simulation_frame, text="?", width=25, height=25, command=self.show_simulation_info)
-        info_simulation_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
-
+        info_simulation_button.pack(side="bottom", anchor="se", pady=5, padx=5)
 
         # Prediction Section
         self.prediction_frame = ctk.CTkFrame(self.bottom_frame, corner_radius=10)
@@ -116,10 +129,9 @@ class SoundwatcherApp(ctk.CTk):
         self.confidence_label = ctk.CTkLabel(self.prediction_frame, text="Confidence: -%", font=ctk.CTkFont(size=14))
         self.confidence_label.pack(pady=5)
 
-        # Add info button for Prediction section
+        # Info button for Prediction section
         info_prediction_button = ctk.CTkButton(self.prediction_frame, text="?", width=25, height=25, command=self.show_prediction_info)
-        info_prediction_button.pack(side="bottom", anchor="se", pady=5, padx=5)  # Align bottom-right
-
+        info_prediction_button.pack(side="bottom", anchor="se", pady=5, padx=5)
 
         # Start Threads
         self.audio_thread = threading.Thread(target=self.start_realtime_audio, daemon=True)
@@ -152,6 +164,13 @@ class SoundwatcherApp(ctk.CTk):
             marker = self.map_view.set_marker(mic["lat"], mic["lon"], text=mic["id"])
             marker.data = mic  # Store microphone data in the marker object
 
+    def hide_camera_view(self):
+        self.camera_frame.grid_remove()  # Hide the camera view
+
+    def show_camera_view(self, camera_name):
+        self.camera_view_placeholder.configure(text=f"{camera_name} activated")
+        self.camera_frame.grid()  # Show camera view
+
     def start_realtime_audio(self):
         try:
             while self.running:
@@ -164,6 +183,7 @@ class SoundwatcherApp(ctk.CTk):
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                     event_id = f"RT-{len(self.loaded_log_ids) + 1}"
                     self.register_log(event_id, timestamp, f"{volume_db:.2f}", label)
+                    self.show_camera_view("Camera #1")  # Trigger camera
         except Exception as e:
             print(f"Error in real-time audio: {e}")
 
@@ -191,6 +211,7 @@ class SoundwatcherApp(ctk.CTk):
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             event_id = f"Sim-{len(self.loaded_log_ids) + 1}"
             self.register_log(event_id, timestamp, "-", label)
+            self.show_camera_view("Simulated Camera")  # Trigger camera for simulation
         except Exception as e:
             print(f"Error during simulation: {e}")
             self.prediction_label.configure(text="Prediction: Error")
